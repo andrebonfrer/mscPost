@@ -15,6 +15,7 @@
 #' @importFrom data.table := is.data.table uniqueN as.data.table
 #'
 # makes X, y, Z, and W as a list
+#' @export
 prepare_data <- function(dta = NULL, res = NULL,
                          f.X = as.formula(),
                          f.Z = as.formula(),

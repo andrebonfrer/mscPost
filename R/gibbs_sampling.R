@@ -10,10 +10,9 @@
 #' @param n_iter Number of iterations to run.
 #' @param burn_in Number of iterations to discard as burn-in.
 #' @return A list of MCMC samples.
-#' @export
 #' @importFrom stats rgamma rnorm
 #' @importFrom utils txtProgressBar setTxtProgressBar
-#'
+#' @export
 gibbs_sampling <- function(gdata,
                            n_iter = 1000,
                            burn_in = 500) {
