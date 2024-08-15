@@ -1,3 +1,6 @@
+# specify any global variables here
+utils::globalVariables(c("tvg.dummy", "id", "V1", "GR", "SCweight", "..xvars", "dv", "wID"))
+
 #' Prepares data
 #'
 #' Function to prepare data for an object to be taken in to Gibbs sampler
@@ -22,7 +25,6 @@ prepare_data <- function(dta = NULL, res = NULL,
                          flags = NULL,
                          verbose = TRUE){
 
-  utils::globalVariables(c("tvg.dummy", "id", "V1", "GR", "SCweight", "..xvars", "dv", "wID"))
 
   # check for dataset and weights
   if(is.null(dta) || !is.data.table(dta)) stop("Provide a data table!")
