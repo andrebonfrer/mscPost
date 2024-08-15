@@ -35,7 +35,7 @@ gibbs_sampling <- function(gdata,
   tau <- rep(1, K)
 
   # do these outside the main iterations?
-  XtW <- t(X_block) %*% W_block
+  XtW <- Matrix::t(X_block) %*% W_block
   XtWX <- XtW %*% X_block
   XtWy <- XtW %*% y_block
 
@@ -52,15 +52,15 @@ gibbs_sampling <- function(gdata,
     # set up Zstar
     dZ <- rep(0,K)
     dZ[gdata$cov$intX] <- 1
-    Z_star <- kronecker(Z, dZ)
+    Z_star <- Matrix::kronecker(Z, dZ)
 
     # sample beta given y, X, W, sigma2, gamma, tau
-    Sigma_beta_prior_inv <- kronecker(diag(J0), diag(1/tau)) # prior inverse of beta_sigma
+    Sigma_beta_prior_inv <- Matrix::kronecker(diag(J0), diag(1/tau)) # prior inverse of beta_sigma
     q <- Z_star %*% gamma
     A <- XtWX / sigma2 + Sigma_beta_prior_inv
     b <- XtWy / sigma2 + Sigma_beta_prior_inv %*% q
-    cA <- chol(A)
-    A_inv <- chol2inv(cA)
+    cA <- Matrix::chol(A)
+    A_inv <- Matrix::chol2inv(cA)
     mu_beta <- A_inv%*%b
 
     beta <- rMVNormCovariance(1, mu = mu_beta, Sigma = A_inv)
@@ -69,14 +69,14 @@ gibbs_sampling <- function(gdata,
 
     # Sample gamma given beta and tau
     beta_2 <- beta_matrix[, 2]
-    V_gamma <- solve(t(Z) %*% Z / tau[2]^2 + diag(G))
+    V_gamma <- Matrix::solve(t(Z) %*% Z / tau[2]^2 + diag(G))
     m_gamma <- V_gamma %*% (t(Z) %*% beta_2 / tau[2]^2)
     gamma <- rMVNormCovariance(1, mu = m_gamma, Sigma = V_gamma)
 
     # Sample sigma2 given y and beta
     residuals <- y_block - X_block %*% beta
     alpha <- length(y_block) / 2
-    beta_param <- sum((t(residuals) %*% W_block %*% residuals)) / 2
+    beta_param <- sum((Matrix::t(residuals) %*% W_block %*% residuals)) / 2
     sigma2 <- 1 / rgamma(1, shape = alpha, rate = beta_param)
 
     # Sample tau given beta and gamma
@@ -90,9 +90,9 @@ gibbs_sampling <- function(gdata,
     if(iter == burn_in) cat("\nBeginning sampling after burnin.")
     if (iter > burn_in) {
       beta_samples[iter - burn_in, ] <- as.numeric(beta)
-      gamma_samples[iter - burn_in, ] <- gamma
-      sigma2_samples[iter - burn_in] <- sigma2
-      tau_samples[iter - burn_in, ] <- tau
+      gamma_samples[iter - burn_in, ] <- as.numeric(gamma)
+      sigma2_samples[iter - burn_in] <- as.numeric(sigma2)
+      tau_samples[iter - burn_in, ] <- as.numeric(tau)
     }
     # Update progress bar
     setTxtProgressBar(pb, iter)

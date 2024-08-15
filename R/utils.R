@@ -30,15 +30,12 @@ winsorize <- function(x, probs = c(0.025, 0.975)) {
 #' @param n Number of draws.
 #' @param mu A vector of means.
 #' @param Sigma A covariance matrix
-#' @examples
-#' # Example usage
-#' rMVNormCovariance(10, mu = c(0,0),Sigma = diag(2))
+#' @importFrom Matrix Matrix chol
 #' @export
-#'
 rMVNormCovariance <- function(n, mu, Sigma){
   p <- length(mu)
-  Z <- matrix(rnorm(p*n), p, n)
-  L <- t(chol(Sigma)) # By default R's chol function returns upper cholesky factor
+  Z <- Matrix::Matrix(rnorm(p*n), nrow = p, ncol = n)
+  L <- Matrix::t(Matrix::chol(Sigma)) # By default R's chol function returns upper cholesky factor
   X <- L%*%Z
   X <- sweep(X, 1, mu, FUN=`+`)
   return(X)

@@ -17,7 +17,3 @@ rMVNormCovariance(n, mu, Sigma)
 Useful for very large draws of a multivariate vector
 uses a Cholesky decomposition
 }
-\examples{
-# Example usage
-rMVNormCovariance(10, mu = c(0,0),Sigma = diag(2))
-}
