@@ -7,13 +7,11 @@ library(Matrix)
 rm(list=ls())
 gc()
 
-
 # read in SC object here
 
 # source data which contains weights
 a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l28_lambda_0.3.rds")
 #a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
-
 
 #######
 
@@ -88,15 +86,16 @@ gdata <- prepare_data(dta=a$data,
                       res=a$res,
                       f.X = "AmountDeposit ~ 1 + tvg.dummy",
                       f.Z = "~ 1 + goal_difficulty + goal_commitment + initialgoalstance +
-      I(goal_difficulty^2) + I(goal_commitment^2) + I(initialgoalstance^2) ",
+      I(goal_difficulty^2) + I(goal_commitment^2) + I(initialgoalstance^2) + age +
+                      income + gender + netwealth + portfolioriskpreference",
                       flags = flags
 )
 
 # Step 2: sample from posteriors of each set of parameters
 # Perform Gibbs sampling
 samples <- gibbs_sampling(gdata,
-                          n_iter = 5,
-                          burn_in = 2)
+                          n_iter = 500,
+                          burn_in = 250)
 
 # Step 3: Extract samples and summarise
 beta_samples <- samples$beta_samples
@@ -111,8 +110,9 @@ beta_sd_est <- apply(beta_samples, 2, sd)
 gamma_mean_est <- apply(gamma_samples, 2, mean)
 gamma_sd_est <- apply(gamma_samples, 2, sd)
 
-gamma_res <- cbind(gamma_mean_est,gamma_sd_est)
-colnames(gamma_res) <- c("Mean", "Std Dev")
+gamma_summary <- data.frame(Est.mean = gamma_mean_est, Est.sd = gamma_sd_est,
+           row.names = colnames(gdata$Z))
+
 
 sigma2_mean_est <- mean(sigma2_samples)
 tau_mean_est <- apply(tau_samples, 2, mean)
