@@ -11,8 +11,11 @@ gc()
 
 # source data which contains weights
 a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l28_lambda_0.3.rds")
+#a <- readRDS("~/Dropbox/Raiz/Results/ssc_referrals_week_l28_nu0_lambda_0.3.rds")
 #a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
 
+# a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
+ a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l51.rds")
 #######
 
 
@@ -87,15 +90,15 @@ gdata <- prepare_data(dta=a$data,
                       f.X = "AmountDeposit ~ 1 + tvg.dummy",
                       f.Z = "~ 1 + goal_difficulty + goal_commitment + initialgoalstance +
       I(goal_difficulty^2) + I(goal_commitment^2) + I(initialgoalstance^2) + age +
-                      income + gender + netwealth + portfolioriskpreference",
+                      income +  gender + netwealth + portfolioriskpreference",
                       flags = flags
 )
 
 # Step 2: sample from posteriors of each set of parameters
 # Perform Gibbs sampling
 samples <- gibbs_sampling(gdata,
-                          n_iter = 500,
-                          burn_in = 250)
+                          n_iter = 100,
+                          burn_in = 50)
 
 # Step 3: Extract samples and summarise
 beta_samples <- samples$beta_samples
@@ -139,7 +142,7 @@ library(coda)
 run_single_chain <- function(seed) {
   set.seed(seed)
   samples <- gibbs_sampling(gdata = gdata,
-                            n_iter = 2000, burn_in = 1000)
+                            n_iter = 40000, burn_in = 35000)
   return(samples)
 }
 
@@ -153,7 +156,7 @@ seeds <- 123 + 0:(num_chains - 1)
 chains <- mclapply(seeds, run_single_chain, mc.cores = num_chains)
 
 # Extract the beta samples from each chain
-beta_chains <- lapply(chains, function(chain) mcmc(chain$gamma_samples))
+gamma_chains <- lapply(chains, function(chain) mcmc(chain$gamma_samples))
 
 # Combine into an mcmc.list object
 combined_mcmc <- mcmc.list(gamma_chains)
