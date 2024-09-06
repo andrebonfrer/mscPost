@@ -32,7 +32,15 @@ prepare_data <- function(dta = NULL, res = NULL,
   spinner <- c("|", "/", "-", "\\")
 
   f.X <- as.formula(f.X)
-  f.Z <- as.formula(f.Z)
+
+  f.Z_str <- deparse(f.Z)
+
+  f.Z_parts <- strsplit(f.Z_str, "\\|")[[1]]
+
+  # main equation
+  f.Z <- as.formula(f.Z_parts[1])
+
+  if(length(f.Z_parts)==2) f.Z.i <- f.Z_parts[2]
 
   # parse the y~X formula
   dvname <- all.vars(f.X)[1]

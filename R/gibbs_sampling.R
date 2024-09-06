@@ -19,6 +19,7 @@ gibbs_sampling <- function(gdata,
 
   y_block <- gdata$Y_block
   X_block <- gdata$X_block
+  Z_block <- gdata$Z_block
   W_block <- gdata$W
   Z <- gdata$Z
 
@@ -67,7 +68,7 @@ gibbs_sampling <- function(gdata,
 
     beta_matrix <- matrix(beta, ncol = K, byrow = TRUE)
 
-    # Sample gamma given beta and tau
+    # Sample gamma given beta and tau - using ivGibbs
     beta_2 <- beta_matrix[, 2]
     V_gamma <- Matrix::solve(t(Z) %*% Z / tau[2]^2 + diag(G))
     m_gamma <- V_gamma %*% (t(Z) %*% beta_2 / tau[2]^2)
