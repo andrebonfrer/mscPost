@@ -16,6 +16,7 @@ a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l28_lambda_0.3.rds")
 
 # a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
  a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l51.rds")
+ a <- readRDS("~/Dropbox/Raiz/Results/SSC/ssc_dv_AmountDeposit_nu0_0_lag_21_lead_40_lambda_5.rds")
 #######
 
 

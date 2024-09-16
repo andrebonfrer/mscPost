@@ -62,6 +62,8 @@ prepare_data <- function(dta = NULL, res = NULL,
   # Add Generalized Residual to data set
   dta$GR <- dta$tvg.dummy*imr + (1-dta$tvg.dummy)*imr
 
+browser()
+
   # finished with selection equation set up
 
   # weights matrix from data set
@@ -90,7 +92,7 @@ prepare_data <- function(dta = NULL, res = NULL,
     cat("\r", spinner[(j0 %% length(spinner)) + 1], sep = "")
     wj <- weightmatrix[,j0]
     # find the treated individual in the donor pool of all N
-    # needed? I think we keep it at zero?
+#    if(dta[id == tlist[j0], max(goal_set_wID,na.rm=TRUE)] >= 62-40
     j.idx <- match(tlist[j0], idlist)
     wj[j.idx] <- 1
 
@@ -125,12 +127,10 @@ prepare_data <- function(dta = NULL, res = NULL,
   K <- ncol(X_list[[1]])
 
   # Combine X_list, y_list, and weights_list into arrays
-  X_array <- array(NA, dim = c(J0, N, K))
   y_array <- array(NA, dim = c(J0, N))
   y_long <- weights_array <- rep(0, length=J0*N)
 
   for (j0 in 1:J0) {
-    X_array[j0, , ] <- X_list[[j0]]
     y_array[j0, ] <- y_list[[j0]]
     weights_array[(j0-1)*N+1:N] <- weights_list[[j0]]
     y_long[(j0-1)*N+1:N] <- y_list[[j0]]
