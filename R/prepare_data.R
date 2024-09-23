@@ -53,11 +53,11 @@ prepare_data <- function(dta = NULL, res = NULL,
                      data = dta)
 
   # add the generalized residual
-  PR <- predict(first_stage, type = "response")
+  PR <- predict(first_stage)
 
   # Add Generalized Residual to data set
-  # Should be tvgdummy * dnorm(PR)/ pnorm(PR) + (1-tvgdummy) * dnorm(-PR)/pnorm(-PR)
-  dta$GR <- dta$tvg.dummy*dnorm(PR)/pnorm(PR) + (1-dta$tvg.dummy)*dnorm(-PR)/pnorm(-PR)
+  # Should be tvgdummy * dnorm(PR)/ pnorm(PR) - (1-tvgdummy) * dnorm(-PR)/pnorm(-PR)
+  dta$GR <- dta$tvg.dummy*dnorm(PR)/pnorm(PR) - (1-dta$tvg.dummy)*dnorm(-PR)/pnorm(-PR)
 
   # finished with selection equation set up
 

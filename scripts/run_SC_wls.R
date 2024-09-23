@@ -16,7 +16,7 @@ gc()
 
 # a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
 # a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l51.rds")
- a <- readRDS("~/Dropbox/Raiz/Results/SSC/ssc_dv_AmountDeposit_nu0_0_lag_21_lead_40_lambda_0.3.rds")
+ a <- readRDS("~/Dropbox/Raiz/Results/SSC/ssc_dv_AmountDeposit_nu0_0_lag_21_lead_35_lambda_0.rds")
 #######
 
 
@@ -116,7 +116,6 @@ gamma_sd_est <- apply(gamma_samples, 2, sd)
 
 gamma_summary <- data.frame(Est.mean = gamma_mean_est, Est.sd = gamma_sd_est,
            row.names = colnames(gdata$Z))
-
 
 sigma2_mean_est <- mean(sigma2_samples)
 tau_mean_est <- apply(tau_samples, 2, mean)
