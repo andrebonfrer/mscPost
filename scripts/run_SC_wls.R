@@ -10,13 +10,13 @@ gc()
 # read in SC object here
 
 # source data which contains weights
-a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l28_lambda_0.3.rds")
+#a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l28_lambda_0.3.rds")
 #a <- readRDS("~/Dropbox/Raiz/Results/ssc_referrals_week_l28_nu0_lambda_0.3.rds")
 #a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
 
 # a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
- a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l51.rds")
- a <- readRDS("~/Dropbox/Raiz/Results/SSC/ssc_dv_AmountDeposit_nu0_0_lag_21_lead_25_lambda_0.3.rds")
+# a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l51.rds")
+ a <- readRDS("~/Dropbox/Raiz/Results/SSC/ssc_dv_AmountDeposit_nu0_0_lag_21_lead_40_lambda_0.3.rds")
 #######
 
 
@@ -98,8 +98,8 @@ gdata <- prepare_data(dta=a$data,
 # Step 2: sample from posteriors of each set of parameters
 # Perform Gibbs sampling
 samples <- gibbs_sampling(gdata,
-                          n_iter = 100,
-                          burn_in = 50)
+                          n_iter = 1000,
+                          burn_in = 500)
 
 # Step 3: Extract samples and summarise
 beta_samples <- samples$beta_samples

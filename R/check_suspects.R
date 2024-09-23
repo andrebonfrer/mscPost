@@ -16,9 +16,14 @@ check_suspects <- function(dir){
     .a <- readRDS(paste0(dir,fh))
     w <- .a$res$weights
     # check
-    if(max(colSums(w))>1.1) suspect <- rbind(suspect,c(fh,round(min(colSums(w)),4),round(max(colSums(w)),4)))
-    if(max(w) < 0.0001) suspect <- rbind(suspect,c(fh,round(min(w),4),round(max(w),4)))
-    if(max(w) > 10) suspect <- rbind(suspect,c(fh,round(min(w),4),round(max(w),4)))
+    if(max(colSums(w))>1.1) {
+      suspect <- rbind(suspect,c(fh,
+                                 round(min(colSums(w)),4),
+                                 round(max(colSums(w)),4)))
+      } else {
+        if(max(w) < 0.0001) suspect <- rbind(suspect,c(fh,round(min(w),4),round(max(w),4)))
+        if(max(w) > 10) suspect <- rbind(suspect,c(fh,round(min(w),4),round(max(w),4)))
+    }
   }
 
   return(suspect)
