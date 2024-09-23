@@ -54,15 +54,10 @@ prepare_data <- function(dta = NULL, res = NULL,
 
   # add the generalized residual
   PR <- predict(first_stage, type = "response")
-  pdf_values <- dnorm(PR)
-  cdf_values <- pnorm(PR)
-  # Compute the Inverse Mills Ratio
-  imr <- pdf_values / (1 - cdf_values)
 
   # Add Generalized Residual to data set
-  dta$GR <- dta$tvg.dummy*imr + (1-dta$tvg.dummy)*imr
-
-browser()
+  # Should be tvgdummy * dnorm(PR)/ pnorm(PR) + (1-tvgdummy) * dnorm(-PR)/pnorm(-PR)
+  dta$GR <- dta$tvg.dummy*dnorm(PR)/pnorm(PR) + (1-dta$tvg.dummy)*dnorm(-PR)/pnorm(-PR)
 
   # finished with selection equation set up
 

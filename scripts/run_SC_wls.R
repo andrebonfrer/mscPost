@@ -16,7 +16,7 @@ a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l28_lambda_0.3.rds")
 
 # a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
  a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l51.rds")
- a <- readRDS("~/Dropbox/Raiz/Results/SSC/ssc_dv_AmountDeposit_nu0_0_lag_21_lead_40_lambda_5.rds")
+ a <- readRDS("~/Dropbox/Raiz/Results/SSC/ssc_dv_AmountDeposit_nu0_0_lag_21_lead_25_lambda_0.3.rds")
 #######
 
 
@@ -143,7 +143,7 @@ library(coda)
 run_single_chain <- function(seed) {
   set.seed(seed)
   samples <- gibbs_sampling(gdata = gdata,
-                            n_iter = 40000, burn_in = 35000)
+                            n_iter = 1200, burn_in = 500)
   return(samples)
 }
 

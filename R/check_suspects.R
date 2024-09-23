@@ -8,9 +8,7 @@
 #' @export
 check_suspects <- function(dir){
 
-  # point to the right directory
-  setwd(dir)
-
+  # find the files
   flist <- list.files(path = dir,
                       pattern = "rds")
   suspect <- NULL
@@ -18,8 +16,9 @@ check_suspects <- function(dir){
     .a <- readRDS(paste0(dir,fh))
     w <- .a$res$weights
     # check
-    if(max(w) < 0.01) suspect <- rbind(suspect,c(fh,min(.a),max(.a)))
-    if(max(w) > 10) suspect <- rbind(suspect,c(fh,min(w),max(w)))
+    if(max(colSums(w))>1.1) suspect <- rbind(suspect,c(fh,round(min(colSums(w)),4),round(max(colSums(w)),4)))
+    if(max(w) < 0.0001) suspect <- rbind(suspect,c(fh,round(min(w),4),round(max(w),4)))
+    if(max(w) > 10) suspect <- rbind(suspect,c(fh,round(min(w),4),round(max(w),4)))
   }
 
   return(suspect)
