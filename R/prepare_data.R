@@ -32,30 +32,21 @@ prepare_data <- function(dta = NULL, res = NULL,
   spinner <- c("|", "/", "-", "\\")
 
   # first stage parts
-  f.X <- as.formula(f.X)
-  f.X_str <- deparse(f.X)
-  f.X_parts <- strsplit(f.X_str,split="\\|")[[1]]
-  if(length(f.X_parts)>2) stop("You are getting a bit fancy with double first stages..")
-  if(length(f.X_parts)<2) warning("Not modeling a first stage")
-  if(length(f.X_parts)==2) {
-    f.X.base <- f.X_parts[1]
-    f.X.firststage <- f.X_parts[2]
-  }
-
+  f.X.parsed <- parse_complex_formula(f.X)
 
   # second stage equation
   f.Z <- as.formula(f.Z)
 
   # parse the y~X formula
-  dvname <- all.vars(f.X)[1]
+  dvname <- all.vars(f.X.parsed$left_formula)[1]
 
   # selection equation code below - later make as (part of) formula
   # first stage object for selection equation
-  if(length(f.X_parts)==2) {
+  if(!is.null(f.X.parsed$right_formula)) {
     if(verbose) cat("Running first stage (selection) equation. Be patient.\n")
 
     # Fit the selection equation (first stage)
-    first_stage <- glm(f.X.firststage,
+    first_stage <- glm(f.X.parsed$right_formula,
                      family = binomial(link = "probit"),
                      data = dta)
 
@@ -63,7 +54,7 @@ prepare_data <- function(dta = NULL, res = NULL,
     PR <- predict(first_stage, type = "response")
 
     # Calculate and add Generalized Residual (GR) to data set
-    dta$GR <- dta$tvg.dummy*dnorm(PR)/pnorm(PR) +
+    dta$GR <- dta$tvg.dummy*dnorm(PR)/pnorm(PR) -
               (1-dta$tvg.dummy)*dnorm(PR)/pnorm(PR)
   }  # finished with selection equation set up (if included)
 
@@ -101,9 +92,13 @@ prepare_data <- function(dta = NULL, res = NULL,
     .idlist <- c(tlist[j0], setdiff(idlist,tlist))
 
     # cv for X (set up outside loop)
-    cXv <- model.matrix(f.X,data=dta)
+    cXv <- model.matrix(f.X.parsed$left_formula, data=dta)
     # set up panel for one person versus donor, aliging weights
-    .a <- as.data.table(cbind(cXv,dta[,list(id,dv = get(dvname),GR)]))
+    if(!is.null(f.X.parsed$right_formula)) {
+      .a <- as.data.table(cbind(cXv,dta[,list(id,dv = get(dvname),GR)]))
+    } else {
+      .a <- as.data.table(cbind(cXv,dta[,list(id,dv = get(dvname))]))
+    }
     .a[,SCweight := wj[match(id,idlist)]]
 
     # check
@@ -115,7 +110,11 @@ prepare_data <- function(dta = NULL, res = NULL,
     .aa <- .a[id %in% .idlist,..xvars]
 
     X_list[[j0]] <- as.matrix(.aa)
-    X_df_list[[j0]] <- cbind(1, .aa[,list(tvg.dummy,GR)])
+    if(!is.null(f.X.parsed$right_formula)) {
+      X_df_list[[j0]] <- cbind(1, .aa[,list(tvg.dummy,GR)])
+    } else {
+      X_df_list[[j0]] <- cbind(1, .aa[,list(tvg.dummy)])
+    }
 
     y_list[[j0]] <- .a[id %in% .idlist,dv]
 
