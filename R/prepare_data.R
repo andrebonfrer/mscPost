@@ -31,46 +31,41 @@ prepare_data <- function(dta = NULL, res = NULL,
   # Define spinner symbols
   spinner <- c("|", "/", "-", "\\")
 
+  # first stage parts
   f.X <- as.formula(f.X)
+  f.X_str <- deparse(f.X)
+  f.X_parts <- strsplit(f.X_str,split="\\|")[[1]]
+  if(length(f.X_parts)>2) stop("You are getting a bit fancy with double first stages..")
+  if(length(f.X_parts)<2) warning("Not modeling a first stage")
+  if(length(f.X_parts)==2) {
+    f.X.base <- f.X_parts[1]
+    f.X.firststage <- f.X_parts[2]
+  }
 
-  f.Z_str <- deparse(f.Z)
 
-  f.Z_parts <- strsplit(f.Z_str, "\\|")[[1]]
-
-  # main equation
-  f.Z <- as.formula(f.Z_parts[1])
-
-  if(length(f.Z_parts)==2) f.Z.i <- f.Z_parts[2]
+  # second stage equation
+  f.Z <- as.formula(f.Z)
 
   # parse the y~X formula
   dvname <- all.vars(f.X)[1]
 
   # selection equation code below - later make as (part of) formula
   # first stage object for selection equation
-  if(verbose) cat("Running first stage (selection) equation. Be patient.\n")
-  f1 <- paste0("tvg.dummy ~ factor(wID) + ",
-               paste0(flags$columns_instruments, collapse = "+"),
-               "+",
-               paste0(flags$cov.var.first.stage, collapse="+"),
-               "+ email_count_week + I(email_count_week^2) + count.push"
-  )
+  if(length(f.X_parts)==2) {
+    if(verbose) cat("Running first stage (selection) equation. Be patient.\n")
 
-  # Fit the selection equation (first stage)
-  first_stage <- glm(f1 ,
+    # Fit the selection equation (first stage)
+    first_stage <- glm(f.X.firststage,
                      family = binomial(link = "probit"),
                      data = dta)
 
-  # add the generalized residual
-  PR <- predict(first_stage, type = "response")
-  pdf_values <- dnorm(PR)
-  cdf_values <- pnorm(PR)
-  # Compute the Inverse Mills Ratio
-  imr <- pdf_values / (1 - cdf_values)
+    # add the generalized residual
+    PR <- predict(first_stage, type = "response")
 
-  # Add Generalized Residual to data set
-  dta$GR <- dta$tvg.dummy*imr + (1-dta$tvg.dummy)*imr
-
-  # finished with selection equation set up
+    # Calculate and add Generalized Residual (GR) to data set
+    dta$GR <- dta$tvg.dummy*dnorm(PR)/pnorm(PR) +
+              (1-dta$tvg.dummy)*dnorm(PR)/pnorm(PR)
+  }  # finished with selection equation set up (if included)
 
   # weights matrix from data set
   weightmatrix <- res$weights
@@ -162,6 +157,6 @@ prepare_data <- function(dta = NULL, res = NULL,
               Z = Z.dm,
               cov = list(Xcols = .cn,
                          Zcols = colnames(Z.dm),
-                         intX = which(.cn=="tvg.dummy"))
+                         intX = which(.cn == all.vars(f.Z)[1]))
   ))
 }

@@ -1,6 +1,6 @@
 # run_SC_wls.R
 
-library(mscPost)
+#library(mscPost)
 library(data.table)
 library(Matrix)
 
@@ -10,12 +10,7 @@ gc()
 # read in SC object here
 
 # source data which contains weights
-a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l28_lambda_0.3.rds")
-#a <- readRDS("~/Dropbox/Raiz/Results/ssc_referrals_week_l28_nu0_lambda_0.3.rds")
-#a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
-
-# a <- readRDS("~/Dropbox/Raiz/Results/ssc_signin_week_l28_nu0_lambda_0.3.rds")
-a <- readRDS("~/Dropbox/Raiz/Results/ssc_AmountDeposit_l51.rds")
+a <- readRDS("~/Dropbox/Raiz/Results/SSC/ssc_dv_AmountDeposit_nu0_0_lag_21_lead_40_lambda_0.3.rds")
 #######
 
 
@@ -85,9 +80,15 @@ a$data <- dta
 
 # Step 1: generate data object
 
+fXb <- paste0("tvg.dummy ~ factor(wID) + ",
+             paste0(flags$columns_instruments, collapse = "+"),
+             "+",
+             paste0(flags$cov.var.first.stage, collapse="+"),
+             "+ email_count_week + I(email_count_week^2) + count.push")
+
 gdata <- prepare_data(dta=a$data,
                       res=a$res,
-                      f.X = "AmountDeposit ~ 1 + tvg.dummy",
+                      f.X = paste0("AmountDeposit ~ 1 + tvg.dummy|",fXb),
                       f.Z = "~ 1 + goal_difficulty + goal_commitment + initialgoalstance +
       I(goal_difficulty^2) + I(goal_commitment^2) + I(initialgoalstance^2) + age +
                       income +  gender + netwealth + portfolioriskpreference",
