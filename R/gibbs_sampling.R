@@ -69,7 +69,7 @@ gibbs_sampling <- function(gdata,
     beta_matrix <- matrix(beta, ncol = K, byrow = TRUE)
 
     # Sample gamma given beta and tau - using ivGibbs
-    beta_2 <- beta_matrix[, 2]
+    beta_2 <- beta_matrix[, gdata$cov$intX]
     V_gamma <- Matrix::solve(t(Z) %*% Z / tau[2]^2 + diag(G))
     m_gamma <- V_gamma %*% (t(Z) %*% beta_2 / tau[2]^2)
     gamma <- rMVNormCovariance(1, mu = m_gamma, Sigma = V_gamma)

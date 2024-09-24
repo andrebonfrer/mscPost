@@ -89,7 +89,7 @@ fXb <- paste0("tvg.dummy ~ factor(wID) + ",
 gdata <- prepare_data(dta=a$data,
                       res=a$res,
                       f.X = paste0("AmountDeposit ~ 1 + tvg.dummy|",fXb),
-                      f.Z = "~ 1 + goal_difficulty + goal_commitment + initialgoalstance +
+                      f.Z = "tvg.dummy ~ 1 + goal_difficulty + goal_commitment + initialgoalstance +
       I(goal_difficulty^2) + I(goal_commitment^2) + I(initialgoalstance^2) + age +
                       income +  gender + netwealth + portfolioriskpreference",
                       flags = flags
