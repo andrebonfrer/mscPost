@@ -4,7 +4,12 @@
 \alias{gibbs_sampling}
 \title{Gibbs Sampling Function}
 \usage{
-gibbs_sampling(gdata, n_iter = 1000, burn_in = 500)
+gibbs_sampling(
+  gdata,
+  n_iter = 1000,
+  burn_in = 500,
+  run.selection.gibbs = FALSE
+)
 }
 \arguments{
 \item{gdata}{An object produced by augsynth "multisynth"
@@ -16,6 +21,9 @@ gdata$Z A covariate matrix.}
 \item{n_iter}{Number of iterations to run.}
 
 \item{burn_in}{Number of iterations to discard as burn-in.}
+
+\item{run.selection.gibbs}{logical - if you want to implement Gibbs
+for selection equation (untested)}
 }
 \value{
 A list of MCMC samples.

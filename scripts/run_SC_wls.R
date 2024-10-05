@@ -110,7 +110,8 @@ gdata <- prepare_data(dta=a$data,
 # Perform Gibbs sampling
 samples <- gibbs_sampling(gdata,
                           n_iter = 20,
-                          burn_in = 10)
+                          burn_in = 10,
+                          run.selection.gibbs = TRUE)
 
 # Step 3: Extract samples and summarise
 beta_samples <- samples$beta_samples

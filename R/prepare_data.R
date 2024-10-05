@@ -47,7 +47,7 @@ prepare_data <- function(dta = NULL, res = NULL,
 
   # selection equation code below - later make as (part of) formula
   # first stage object for selection equation
-  if(!is.null(f.X.parsed[[1]])) {
+  if(!is.null(f.X.parsed[[2]])) {
     if(verbose) cat("Running first stage (selection) equation. Be patient.\n")
 
     # Fit the selection equation (first stage)
@@ -58,9 +58,13 @@ prepare_data <- function(dta = NULL, res = NULL,
     # add the generalized residual
     PR <- predict(first_stage, type = "response")
 
-    # Calculate and add Generalized Residual (GR) to data set (to be fixed)
+    # Calculate and add Generalized Residual (GR) to data set
     dta$GR <- dta$tvg.dummy*dnorm(PR)/pnorm(PR) -
-              (1-dta$tvg.dummy)*dnorm(PR)/pnorm(PR)
+                (1-dta$tvg.dummy)*dnorm(-PR)/pnorm(-PR)
+
+    # save the model matrix here
+    GRX <- model.matrix(f.X.parsed[[2]], data = dta)
+    GRY <- dta$tvg.dummy
   }  # finished with selection equation set up (if included)
 
   # weights matrix from data set
@@ -172,8 +176,10 @@ prepare_data <- function(dta = NULL, res = NULL,
               W = W,
               Z_block = Z.dm,
               Z.instruments = Z.instruments,
+              GRX = GRX,
               cov = list(Xcols = .cn,
                          Zcols = colnames(Z.dm),
-                         intX = which(.cn == all.vars(f.Z.parsed[[1]])[1]))
+                         intX = which(.cn == all.vars(f.Z.parsed[[1]])[1]),
+                         J0 = J0, J = J, T = T)
   ))
 }
