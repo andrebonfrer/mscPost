@@ -21,7 +21,10 @@ produced by augsynth multisynth}
 
 \item{f.X}{A formula for X - must include "tvg.dummy" for intervention}
 
-\item{f.Z}{A formula for moderators for intervention HTE}
+\item{f.Z}{A formula for moderators for intervention HTE. For example,
+we have a formula f.Z such as:
+tvg.dummy ~ 1 + Z1 + Z2 + Z3 | Z1 ~ Q1 + Q2 | Z2 ~ Q3 + Q4
+and this will have instruments Q1 and Q2 for Z1, and Q3 and Q4 for Z2.}
 
 \item{flags}{A set of needed parameters}
 

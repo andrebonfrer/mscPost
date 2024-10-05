@@ -75,6 +75,9 @@ dta[, goal_difficulty := 100*winsorize(goal_difficulty)]
 dta[, goal_commitment := 100*winsorize(goalcommitment2)]
 dta[, initialgoalstance := 100*winsorize(initialgoalstance)]
 
+dta$Qgc <- rnorm(nrow(dta))
+dta$Qgd <- rnorm(nrow(dta))
+
 # add back to data object
 a$data <- dta
 
@@ -86,20 +89,28 @@ fXb <- paste0("tvg.dummy ~ factor(wID) + ",
              paste0(flags$cov.var.first.stage, collapse="+"),
              "+ email_count_week + I(email_count_week^2) + count.push")
 
+
+# set up f.Z
+f.Za = "tvg.dummy ~ 1 + goal_difficulty + goal_commitment + initialgoalstance +
+      I(goal_difficulty^2) + I(goal_commitment^2) + I(initialgoalstance^2) + age +
+                      income +  gender + netwealth + portfolioriskpreference"
+fZb <- paste0(f.Za, "| goal_difficulty ~ Qgd + age +
+                      income +  gender + netwealth + portfolioriskpreference |
+                      goal_commitment ~ Qgc + age +
+                      income +  gender + netwealth + portfolioriskpreference")
+
 gdata <- prepare_data(dta=a$data,
                       res=a$res,
                       f.X = paste0("AmountDeposit ~ 1 + tvg.dummy|",fXb),
-                      f.Z = "tvg.dummy ~ 1 + goal_difficulty + goal_commitment + initialgoalstance +
-      I(goal_difficulty^2) + I(goal_commitment^2) + I(initialgoalstance^2) + age +
-                      income +  gender + netwealth + portfolioriskpreference",
+                      f.Z = fZb,
                       flags = flags
 )
 
 # Step 2: sample from posteriors of each set of parameters
 # Perform Gibbs sampling
 samples <- gibbs_sampling(gdata,
-                          n_iter = 1000,
-                          burn_in = 500)
+                          n_iter = 20,
+                          burn_in = 10)
 
 # Step 3: Extract samples and summarise
 beta_samples <- samples$beta_samples
@@ -115,7 +126,7 @@ gamma_mean_est <- apply(gamma_samples, 2, mean)
 gamma_sd_est <- apply(gamma_samples, 2, sd)
 
 gamma_summary <- data.frame(Est.mean = gamma_mean_est, Est.sd = gamma_sd_est,
-           row.names = colnames(gdata$Z))
+           row.names = colnames(gamma_samples))
 
 
 sigma2_mean_est <- mean(sigma2_samples)

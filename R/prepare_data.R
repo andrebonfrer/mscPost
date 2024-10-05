@@ -9,7 +9,12 @@ utils::globalVariables(c("tvg.dummy", "id", "V1", "GR", "SCweight", "..xvars", "
 #' @param res An object for modified augmented synthetic control results
 #' produced by augsynth multisynth
 #' @param f.X A formula for X - must include "tvg.dummy" for intervention
-#' @param f.Z A formula for moderators for intervention HTE
+#'
+#' @param f.Z A formula for moderators for intervention HTE. For example,
+#' we have a formula f.Z such as:
+#' tvg.dummy ~ 1 + Z1 + Z2 + Z3 | Z1 ~ Q1 + Q2 | Z2 ~ Q3 + Q4
+#' and this will have instruments Q1 and Q2 for Z1, and Q3 and Q4 for Z2.
+#'
 #' @param flags A set of needed parameters
 #' @param verbose Whether to print a lot of information as it's running
 #' @importFrom stats as.formula binomial dnorm glm model.matrix pnorm predict quantile rgamma rnorm
@@ -35,25 +40,25 @@ prepare_data <- function(dta = NULL, res = NULL,
   f.X.parsed <- parse_complex_formula(f.X)
 
   # second stage equation
-  f.Z <- as.formula(f.Z)
+  f.Z.parsed <- parse_complex_formula(f.Z)
 
-  # parse the y~X formula
-  dvname <- all.vars(f.X.parsed$left_formula)[1]
+  # parse the y~X formula (LHS of the first formula object for f.X)
+  dvname <- all.vars(f.X.parsed[[1]])[1]
 
   # selection equation code below - later make as (part of) formula
   # first stage object for selection equation
-  if(!is.null(f.X.parsed$right_formula)) {
+  if(!is.null(f.X.parsed[[1]])) {
     if(verbose) cat("Running first stage (selection) equation. Be patient.\n")
 
     # Fit the selection equation (first stage)
-    first_stage <- glm(f.X.parsed$right_formula,
+    first_stage <- glm(f.X.parsed[[2]],
                      family = binomial(link = "probit"),
                      data = dta)
 
     # add the generalized residual
     PR <- predict(first_stage, type = "response")
 
-    # Calculate and add Generalized Residual (GR) to data set
+    # Calculate and add Generalized Residual (GR) to data set (to be fixed)
     dta$GR <- dta$tvg.dummy*dnorm(PR)/pnorm(PR) -
               (1-dta$tvg.dummy)*dnorm(PR)/pnorm(PR)
   }  # finished with selection equation set up (if included)
@@ -92,9 +97,9 @@ prepare_data <- function(dta = NULL, res = NULL,
     .idlist <- c(tlist[j0], setdiff(idlist,tlist))
 
     # cv for X (set up outside loop)
-    cXv <- model.matrix(f.X.parsed$left_formula, data=dta)
-    # set up panel for one person versus donor, aliging weights
-    if(!is.null(f.X.parsed$right_formula)) {
+    cXv <- model.matrix(f.X.parsed[[1]], data=dta)
+    # set up panel for one person versus donor, aligning weights
+    if(!is.null(f.X.parsed[[2]])) {
       .a <- as.data.table(cbind(cXv,dta[,list(id,dv = get(dvname),GR)]))
     } else {
       .a <- as.data.table(cbind(cXv,dta[,list(id,dv = get(dvname))]))
@@ -144,7 +149,19 @@ prepare_data <- function(dta = NULL, res = NULL,
 
   Y <- Matrix(data=y_long, byrow=TRUE)
 
-  Z.dm <- model.matrix(f.Z, data = dta[wID==T & id %in% tlist,])
+  .Zdt <- dta[wID==T & id %in% tlist,]
+  Z.dm <- model.matrix(f.Z.parsed[[1]], data = .Zdt)
+  # check for instruments
+  if(length(f.Z.parsed)>1) {
+    Z.im <- list()
+    dv <- NULL
+    for(l in 2:length(f.Z.parsed)) {
+      dv <- c(dv, all.vars(f.Z.parsed[[l]])[1])
+      Z.im[[l-1]] <- model.matrix(f.Z.parsed[[l]], data = .Zdt)
+      }
+    }
+  Z.instruments <- list(dv = dv,
+                        Z.im = Z.im)
 
   .cn <- colnames(.aa)
 
@@ -153,9 +170,10 @@ prepare_data <- function(dta = NULL, res = NULL,
   return(list(Y_block = Y,
               X_block = Xb,
               W = W,
-              Z = Z.dm,
+              Z_block = Z.dm,
+              Z.instruments = Z.instruments,
               cov = list(Xcols = .cn,
                          Zcols = colnames(Z.dm),
-                         intX = which(.cn == all.vars(f.Z)[1]))
+                         intX = which(.cn == all.vars(f.Z.parsed[[1]])[1]))
   ))
 }
