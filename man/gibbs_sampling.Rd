@@ -8,7 +8,8 @@ gibbs_sampling(
   gdata,
   n_iter = 1000,
   burn_in = 500,
-  run.selection.gibbs = FALSE
+  Z_cov_dense = FALSE,
+  run_selection_gibbs = FALSE
 )
 }
 \arguments{
@@ -22,8 +23,9 @@ gdata$Z A covariate matrix.}
 
 \item{burn_in}{Number of iterations to discard as burn-in.}
 
-\item{run.selection.gibbs}{logical - if you want to implement Gibbs
-for selection equation (untested)}
+\item{Z_cov_dense}{logical - whether use dense covariance}
+
+\item{run_selection_gibbs}{logical - whether to run selection eqn}
 }
 \value{
 A list of MCMC samples.

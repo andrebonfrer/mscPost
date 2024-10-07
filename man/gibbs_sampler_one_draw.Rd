@@ -27,7 +27,7 @@ A list with the following components:
 This function performs one iteration of a Gibbs sampler for a simple OLS
 (Ordinary Least Squares) regression model. It samples the coefficients
 (beta) and the variance of the errors (sigma^2) given the current data and
-parameters.
+parameters. Note there is currently no prior that can be passed here.
 }
 \examples{
 # Simulated data example

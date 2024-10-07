@@ -9,22 +9,25 @@
 #'    gdata$Z A covariate matrix.
 #' @param n_iter Number of iterations to run.
 #' @param burn_in Number of iterations to discard as burn-in.
-#' @param run.selection.gibbs logical - if you want to implement Gibbs
-#' for selection equation (untested)
+#' @param Z_cov_dense logical - whether use dense covariance
+#' @param run_selection_gibbs logical - whether to run selection eqn
 #' @return A list of MCMC samples.
 #' @importFrom stats rgamma rnorm
 #' @importFrom utils txtProgressBar setTxtProgressBar
+#' @importFrom Matrix kronecker as.matrix
 #' @export
 gibbs_sampling <- function(gdata,
                            n_iter = 1000,
                            burn_in = 500,
-                           run.selection.gibbs = FALSE) {
+                           Z_cov_dense = FALSE,
+                           run_selection_gibbs = FALSE) {
 
   y_block <- gdata$Y_block
   X_block <- gdata$X_block
   Zbase <- gdata$Z_block
   W_block <- gdata$W
   Zim <- gdata$Z.instruments
+
   # design matrix for probit selection equation
   GRX <- gdata$GRX
 
@@ -45,19 +48,24 @@ gibbs_sampling <- function(gdata,
   tau <- rep(1, K)
 
   # for selection equation
-  if(run.selection.gibbs) {
+  if(run_selection_gibbs) {
     beta_fs <- matrix(0, ncol(GRX), 1)
     sigma2_fs <- 1
   }
 
-  # for instruments (if included)
+  # for instruments for second stage (if included)
   if(!is.null(Zim)) {
-    sigma.Z <- NULL
-    beta.Z <- list()
-    for(l in 1:L) {
-     sigma.Z <- c(sigma.Z,0)
-      beta.Z[[l]] = rep(0,ncol(Zim$Z.im[[l]]))
+    sigma.Z <- list()
+    if(Z_cov_dense) {
+      sigma.Z <- initialize_dense_covariance(L)
+    } else {
+      for(l in 1:L) {
+        # one for each
+        sigma.Z <- c(sigma.Z,1)
+      }
+      sigma.Z <- diag(sigma.Z)
     }
+
   }
 
   # do these outside the main iterations?
@@ -70,84 +78,97 @@ gibbs_sampling <- function(gdata,
   gamma_samples <- matrix(0, n_iter - burn_in, G)
   sigma2_samples <- numeric(n_iter - burn_in)
   tau_samples <- matrix(0, n_iter - burn_in, K)
-  if(run.selection.gibbs) {
-    beta_fs_samples <- matrix(0, n_iter - burn_in, ncol(GRX))
+  if(run_selection_gibbs) {
+    beta_fs_samples <- matrix(0, nrow = n_iter - burn_in, ncol = ncol(GRX))
     sigma2_fs_samples <- numeric(n_iter - burn_in)
   }
 
   # for first stage/instruments
   if(!is.null(Zim)) {
-    beta.Z_samples <- sigma.Z_samples <- list()
-    for(l in 1:L) {
-      sigma.Z_samples[[l]] <- numeric(n_iter - burn_in)
-      beta.Z_samples[[l]] <- matrix(0,nrow = n_iter - burn_in,
+    beta.Z_samples <- list()
+    if(!Z_cov_dense) {
+      sigma.Z_samples <- matrix(0, nrow= n_iter - burn_in, ncol = L)
+    } else sigma.Z_samples <- array(0, dim = c(L,L,n_iter - burn_in))
+
+    for(l in 1:L) beta.Z_samples[[l]] <- matrix(0,nrow = n_iter - burn_in,
                                   ncol = ncol(Zim$Z.im[[l]]))
     }
-  }
+
 
   # Initialize progress bar
   pb <- txtProgressBar(min = 0, max = n_iter, style = 3)
 
   for(iter in 1:n_iter) {
 
-    if(run.selection.gibbs) {
+    ############################ Start selection block
+    if(run_selection_gibbs) {
       # first stage selection equation (this needs a Gibbs step function)
-      .bd <- gibbs_binomial_probit(GRX, dta$tvg.dummy,
+      .bd <- gibbs_binomial_probit(GRX, gdata$GRY,
                                       beta = beta_fs,
                                       Sigma_prior = diag(ncol(GRX)),
                                       mu_prior = rep(0,ncol(GRX)),
                                       sigma2 = sigma2_fs,
                                       alpha_0 = 2,
                                       beta_0 = 2)
+
       beta_fs <- .bd$beta
       sigma2_fs <- .bd$sigma2
 
-      resid <- dta$tvg.dummy - pnorm( GRX %*% beta_fs)
+      resid <- gdata$GRY - pnorm( GRX %*% beta_fs)
 
-      # this step is slow
+      # this step is slow and requires a lot of memory
       X_block <- replace_kth_column_block_diagonal_fast(X_block,
                                                         resid,
                                                         T = gdata$cov$T,
                                                         K = K,
                                                         N = gdata$cov$J,
                                                         k = which(gdata$cov$Xcols=="GR"))
-      # and this part a bit
+      # and this part a bit slow
       XtW <- Matrix::t(X_block) %*% W_block
       XtWX <- XtW %*% X_block
       XtWy <- XtW %*% y_block
 
     }
+    ########################### End selection block
 
-      # sample first stage(s) and estimate mean of posterior for data
+    ########################### Start endogenous regression first stage
+    # sample first stage(s) and estimate mean of posterior for data
       if(!is.null(Zim)) {
-        gibbsZ <- list()
+        gibbsZ <- Ylist <- Qzlist <- list()
       .lmat <- NULL
+      # assemble the multivariate endogenous variables list
       for(l in 1:L) {
-        Y <- gdata$Z_block[,Zim$dv[l]]
-        Qz <- Zim$Z.im[[l]]
-
+        Ylist[[l]] <- gdata$Z_block[,Zim$dv[l]]
+        Qzlist[[l]] <- Zim$Z.im[[l]]
+      }
         # sample
-        gibbsZ[[l]] <- gibbs_sampler_one_draw(Y, Qz,
-                             beta = beta.Z[[l]],
-                             sigma2 = sigma.Z[l])
+
+        if(!Z_cov_dense) {
+          gibbsZ <- gibbs_sampler_one_draw_cov(Ylist, Qzlist,
+                                               sigma_param = sigma.Z,
+                                               covariance_type = "diagonal")
+          } else gibbsZ <- gibbs_sampler_one_draw_cov(Ylist, Qzlist,
+                             sigma_param = sigma.Z,
+                             covariance_type = "dense")
+
         # control function: take Z object and replace the 1st stage dv
         # note: we only need to do this once for each endogenous variable
         # regardless of whether it is subsequently squared or interacted with
         # another variable. However, it must include correspondingly more
         # instruments
 
-        # samples
-        sigma.Z[l] <- gibbsZ[[l]]$sigmaZ2
-        beta.Z[[l]] <- gibbsZ[[l]]$betaZ
+        # samples - cov is either list if diagonal or matrix if dense
+        sigma.Z <- gibbsZ$sigma2_samples
+        beta.Z <- gibbsZ$beta_samples
 
         # residuals appended to covariates in 2nd stage of hierarchical model
-        .l <- gibbsZ[[l]]$residuals
-        colnames(.l) <- paste0("lres",l)
-        .lmat <- cbind(.lmat, .l)
+        .lmat <- gibbsZ$residuals
+        colnames(.lmat) <- paste0("lres",1:L)
 
-      }
-      Z <- cbind(Zbase, .lmat)
-    } else Z <- Zbase
+        Z <- Matrix::as.matrix(cbind(Zbase, .lmat))
+      } else Z <- Zbase
+
+    ######################### end endogenous regressions first stage
 
     # set up Zstar
     dZ <- rep(0,K)
@@ -195,18 +216,18 @@ gibbs_sampling <- function(gdata,
       tau_samples[iter - burn_in, ] <- as.numeric(tau)
 
       if(!is.null(Zim)) {
-        for(l in 1:L) {
-        beta.Z_samples[[l]][iter-burn_in,] <- beta.Z[[l]]
-        sigma.Z_samples[[l]][iter-burn_in] <- sigma.Z[l]
-        }
+        for(l in 1:L) beta.Z_samples[[l]][iter-burn_in,] <- beta.Z[[l]]
+        if(Z_cov_dense) {
+          sigma.Z_samples[,,iter-burn_in] <- sigma.Z
+        } else sigma.Z_samples[iter-burn_in,] <- diag(sigma.Z)
       }
 
-      if(run.selection.gibbs){
-        beta_fs_samples[l,] <- beta_fs
-        sigma2_fs[l] <- sigma2_fs
+      if(run_selection_gibbs){
+        beta_fs_samples[iter-burn_in,] <- beta_fs
+        sigma2_fs[iter-burn_in] <- sigma2_fs
       }
-
     }
+
     # Update progress bar
     setTxtProgressBar(pb, iter)
   }
@@ -215,15 +236,14 @@ gibbs_sampling <- function(gdata,
   colnames(gamma_samples) <- colnames(Z)
 
   if(!is.null(Zim)) {
-
     output <- list(beta_samples = beta_samples, gamma_samples = gamma_samples,
                    sigma2_samples = sigma2_samples, tau_samples = tau_samples,
                    beta.Z_samples = beta.Z_samples,
                    sigma.Z_samples = sigma.Z_samples)
-  } else {
+    } else {
     output <- list(beta_samples = beta_samples, gamma_samples = gamma_samples,
                    sigma2_samples = sigma2_samples, tau_samples = tau_samples)
-  }
+    }
   return(output)
 }
 
@@ -298,6 +318,134 @@ gibbs_sampler_one_draw <- function(y, X, beta, sigma2) {
 }
 
 
+#' Gibbs Sampler for Multivariate Regression with Covariance Option
+#'
+#' This function performs a single Gibbs sampling draw for a multivariate regression model with an option
+#' to use either a dense or diagonal covariance matrix for the outcomes. Each outcome has its own set of predictors.
+#'
+#' The model assumes that each outcome \eqn{y_j} follows a regression model:
+#' \deqn{y_j = X_j \beta_j + \epsilon_j, \quad \epsilon_j \sim \mathcal{N}(0, \Sigma)}
+#' where \eqn{X_j} is the predictor matrix for outcome \eqn{y_j}, \eqn{\beta_j} is the vector of regression
+#' coefficients, and \eqn{\Sigma} is the covariance matrix of the residuals. The covariance matrix can either
+#' be diagonal (independent outcomes) or dense (allowing correlation between outcomes).
+#'
+#' @param y_list A list of outcome vectors. Each element \eqn{y_j} in the list corresponds to the outcomes for one dependent variable.
+#' @param X_list A list of predictor matrices. Each element \eqn{X_j} in the list corresponds to the predictor matrix for the corresponding outcome \eqn{y_j}.
+#' @param sigma_param A list of initial values for the residual variances \eqn{\sigma^2_j} for each outcome when `covariance_type = "diagonal"`, or a dense covariance matrix when `covariance_type = "dense"`.
+#' @param covariance_type A string specifying the type of covariance matrix to use. Can be either `"diagonal"` (no correlation between outcomes) or `"dense"` (allows correlation between outcomes).
+#'
+#' @return A list with the following elements:
+#' \describe{
+#'   \item{\code{beta_samples}}{A list of sampled regression coefficients \eqn{\beta_j} for each outcome.}
+#'   \item{\code{sigma2_samples}}{A list of sampled residual variances \eqn{\sigma^2_j} for each outcome (diagonal case), or the sampled covariance matrix \eqn{\Sigma} (dense case).}
+#'   \item{\code{residuals}}{A list of residuals for each outcome \eqn{r_j = y_j - X_j \beta_j}.}
+#' }
+#'
+#' @examples
+#' # Simulate data for two outcomes with different predictor matrices
+#' set.seed(123)
+#' n <- 100  # Number of observations
+#' p <- 2    # Number of outcomes
+#'
+#' # Create predictor matrices X for each outcome
+#' X1 <- cbind(1, rnorm(n))
+#' X2 <- cbind(1, rnorm(n), rnorm(n))
+#'
+#' # True beta values
+#' beta1 <- c(1, 0.5)
+#' beta2 <- c(1, -0.3, 0.2)
+#'
+#' # Simulate outcomes
+#' y1 <- X1 %*% beta1 + rnorm(n)
+#' y2 <- X2 %*% beta2 + rnorm(n)
+#'
+#' # Prepare data for the Gibbs sampler
+#' y_list <- list(y1, y2)
+#' X_list <- list(X1, X2)
+#' sigma_param <- list(1, 1)  # Diagonal case: Initial values for sigma^2
+#'
+#' # Run the Gibbs sampler with diagonal covariance
+#' result_diag <- gibbs_sampler_one_draw_cov(y_list, X_list, sigma_param, covariance_type = "diagonal")
+#' print(result_diag)
+#'
+#' # Simulate a dense covariance matrix
+#' sigma_param_dense <- matrix(c(1, 0.5, 0.5, 1), 2, 2)  # Dense covariance matrix
+#'
+#' # Run the Gibbs sampler with dense covariance
+#' result_dense <- gibbs_sampler_one_draw_cov(y_list, X_list, sigma_param_dense, covariance_type = "dense")
+#' print(result_dense)
+#'
+#' @export
+gibbs_sampler_one_draw_cov <- function(y_list, X_list, sigma_param,
+                                       covariance_type = "diagonal") {
+  p <- length(y_list)  # Number of outcomes
+  n <- nrow(X_list[[1]])  # Number of observations (assumed to be the same for all outcomes)
+
+  # Storage for results
+  beta_samples <- vector("list", p)
+  residuals_matrix <- matrix(0, nrow = n, ncol = p)  # Store residuals for all outcomes
+
+  if (covariance_type == "diagonal") {
+    # Diagonal case: sigma_param is a list of sigma^2 values
+    sigma2_list <- sigma_param
+  } else if (covariance_type == "dense") {
+    # Dense case: sigma_param is the dense covariance matrix
+    Sigma <- sigma_param
+    Sigma_inv <- solve(Sigma)  # Inverse of the covariance matrix
+  } else {
+    stop("Invalid covariance type. Use 'diagonal' or 'dense'.")
+  }
+
+  # Step 1: Sample beta and sigma^2 for each outcome (or use dense covariance)
+  for (j in 1:p) {
+    X_j <- X_list[[j]]
+    y_j <- y_list[[j]]
+
+    # Precompute some matrix operations for efficiency
+    XtX_inv_j <- solve(t(X_j) %*% X_j)
+
+    # 1. Sample beta_j | y_j, X_j, sigma^2_j or Sigma (if dense)
+    if (covariance_type == "diagonal") {
+      beta_mean_j <- XtX_inv_j %*% t(X_j) %*% y_j
+      beta_var_j <- sigma2_list[[j]] * XtX_inv_j
+      beta_samples[[j]] <- MASS::mvrnorm(1, beta_mean_j, beta_var_j)  # Draw beta from the multivariate normal distribution
+    } else if (covariance_type == "dense") {
+      beta_mean_j <- XtX_inv_j %*% t(X_j) %*% y_j
+      beta_var_j <- Sigma_inv[j, j] * XtX_inv_j  # Use the inverse of Sigma for variance
+      beta_samples[[j]] <- MASS::mvrnorm(1, beta_mean_j, beta_var_j)  # Draw beta from the multivariate normal distribution
+    }
+
+    # 2. Compute residuals and store them
+    residuals_j <- y_j - X_j %*% beta_samples[[j]]
+    residuals_matrix[, j] <- residuals_j  # Store residuals for this outcome
+
+    # 3. Sample sigma^2_j | y_j, X_j, beta_j (diagonal case)
+    if (covariance_type == "diagonal") {
+      alpha <- n / 2
+      beta_param <- sum(residuals_j^2) / 2
+      sigma2_list[j] <- 1 / rgamma(1, shape = alpha, rate = beta_param)  # Sample sigma^2 from inverse-gamma
+    }
+  }
+
+  # Step 4: If dense covariance, sample the covariance matrix
+  if (covariance_type == "dense") {
+    # Degrees of freedom for inverse-Wishart
+    nu <- n + p + 1
+    # Scale matrix for inverse-Wishart
+    S <- t(residuals_matrix) %*% residuals_matrix
+    sigma_sample <- MCMCpack::riwish(nu, S)  # Sample covariance matrix from inverse-Wishart
+  } else {
+    sigma_sample <- sigma2_list  # For diagonal case, return the sampled sigma^2 values from diagonal
+  }
+
+  # Return results: beta samples, residuals, and covariance matrix (if dense)
+  return(list(beta_samples = beta_samples,
+              sigma2_samples = sigma_sample,
+              residuals = as.data.frame(residuals_matrix),
+              covariance = if (covariance_type == "dense") sigma_sample else NULL))
+}
+
+
 
 #' Gibbs Sampling for a Binomial Probit Model with sigma^2
 #'
@@ -345,6 +493,7 @@ gibbs_sampler_one_draw <- function(y, X, beta, sigma2) {
 gibbs_binomial_probit <- function(X, y, beta, Sigma_prior,
                                   mu_prior, sigma2 = 1, alpha_0 = 2, beta_0 = 2) {
 
+
   # Number of observations and predictors
   n <- length(y)
   p <- ncol(X)
@@ -380,5 +529,3 @@ gibbs_binomial_probit <- function(X, y, beta, Sigma_prior,
 
   return(list(beta = beta_new, sigma2 = sigma2_new, z = z))
 }
-
-

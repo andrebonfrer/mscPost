@@ -15,5 +15,7 @@ BugReports: https://github.com/andrebonfrer/mscPost/issues
 Imports: Matrix,
          data.table,
          MASS,
-         truncnorm
+         truncnorm,
+         MCMCpack
+         
          

@@ -10,6 +10,8 @@ replace_kth_column_block_diagonal_fast(M, CR, T, K, N, k)
 \item{M}{A block diagonal matrix with \code{N} blocks, each of size \verb{T x K}. The matrix is expected
 to be in dense format.}
 
+\item{CR}{A numeric column vector of length \code{N * T} to replace the k-th column in each block of the matrix.}
+
 \item{T}{An integer specifying the number of rows in each block of the matrix.}
 
 \item{K}{An integer specifying the number of columns in each block of the matrix.}
@@ -18,8 +20,6 @@ to be in dense format.}
 
 \item{k}{An integer specifying the index of the column (in each block) to be replaced with the corresponding sub-vector from \code{GRX}.
 This value must be in the range \eqn{1 \leq k \leq K}.}
-
-\item{GRX}{A numeric column vector of length \code{N * T} to replace the k-th column in each block of the matrix.}
 }
 \value{
 A matrix \code{M} with the k-th column of each block replaced by the respective sub-vectors from \code{GRX}.
@@ -46,7 +46,7 @@ CR <- rnorm(N * T)
 
 # Replace the 2nd column (k = 2) of each block with the corresponding sub-vectors from GRX
 k <- 2
-M_updated <- replace_kth_column_block_diagonal(M, CR, T, K, N, k)
+M_updated <- replace_kth_column_block_diagonal_fast(M, CR, T, K, N, k)
 
 print(M_updated)  # Print the updated matrix
 
