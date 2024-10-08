@@ -102,17 +102,17 @@ fZb <- paste0(f.Za, "| goal_difficulty ~ Qgd + age +
 gdata <- prepare_data(dta=a$data,
                       res=a$res,
                       f.X = paste0("AmountDeposit ~ 1 + tvg.dummy|",fXb),
-                      f.Z = fZb,
+                      f.Z = f.Za,
                       flags = flags
 )
 
 # Step 2: sample from posteriors of each set of parameters
 # Perform Gibbs sampling
 samples <- gibbs_sampling(gdata,
-                          n_iter = 20,
-                          burn_in = 10,
-                          Z_cov_dense = TRUE,
-                          run_selection_gibbs = TRUE
+                          n_iter = 200,
+                          burn_in = 100,
+                          Z_cov_dense = FALSE,
+                          run_selection_gibbs = FALSE
 )
 
 # Step 3: Extract samples and summarise

@@ -117,12 +117,27 @@ gibbs_sampling <- function(gdata,
       beta_fs <- .bd$beta
       sigma2_fs <- .bd$sigma2
 
+      # 2SRI approach
       resid <- gdata$GRY - pnorm( GRX %*% beta_fs)
-      residfake <- rnorm(nrow(X_block))
+
+      # GR approach
+      PR <- pnorm( GRX %*% beta_fs)
+      GR <- gdata$GRY*dnorm(PR)/pnorm(PR) - (1-gdata$GRY)*dnorm(-PR)/pnorm(-PR)
+
+      .r <- GR
+
+      # transform resid to match dimension of X_block
+      .dtaidx <- gdata$dtaidx
+      .dtaidx$fs_resid <- .r
+      .dtaX <- gdata$X_idlist
+      setkey(.dtaidx,id,wID)
+      setkey(.dtaX,id,wID)
+
+      CR <- .dtaX[.dtaidx][,fs_resid]
 
       # this step is slow and requires a lot of memory
       X_block <- replace_kth_column_block_diagonal_fast(X_block,
-                                                        residfake,
+                                                        CR,
                                                         T = gdata$cov$T * (1+J-J0),
                                                         K = K,
                                                         N = J0,

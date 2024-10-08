@@ -89,6 +89,7 @@ prepare_data <- function(dta = NULL, res = NULL,
   # Create predictor matrices X
   if(verbose) cat("Creating y, X, and w matrix. (This takes a while.)\n")
   y_list <- X_df_list <- X_list <- weights_list <- list()
+  X_idlist <- NULL
   for(j0 in 1:J0) {
     cat("\r", spinner[(j0 %% length(spinner)) + 1], sep = "")
     wj <- weightmatrix[,j0]
@@ -119,11 +120,14 @@ prepare_data <- function(dta = NULL, res = NULL,
     .aa <- .a[id %in% .idlist,..xvars]
 
     X_list[[j0]] <- as.matrix(.aa)
-    if(!is.null(f.X.parsed$right_formula)) {
+    if(!is.null(f.X.parsed[[2]])) {
       X_df_list[[j0]] <- cbind(1, .aa[,list(tvg.dummy,GR)])
     } else {
       X_df_list[[j0]] <- cbind(1, .aa[,list(tvg.dummy)])
     }
+
+    # store wID and id for matching this within sampler
+    X_idlist <- rbind(X_idlist, dta[id %in% .idlist,list(id,wID)])
 
     y_list[[j0]] <- .a[id %in% .idlist,dv]
 
@@ -155,17 +159,18 @@ prepare_data <- function(dta = NULL, res = NULL,
 
   .Zdt <- dta[wID==T & id %in% tlist,]
   Z.dm <- model.matrix(f.Z.parsed[[1]], data = .Zdt)
-  # check for instruments
+
+  # check for instruments - return NULL if it does not exist
   if(length(f.Z.parsed)>1) {
     Z.im <- list()
     dv <- NULL
-    for(l in 2:length(f.Z.parsed)) {
-      dv <- c(dv, all.vars(f.Z.parsed[[l]])[1])
-      Z.im[[l-1]] <- model.matrix(f.Z.parsed[[l]], data = .Zdt)
+      for(l in 2:length(f.Z.parsed)) {
+        dv <- c(dv, all.vars(f.Z.parsed[[l]])[1])
+        Z.im[[l-1]] <- model.matrix(f.Z.parsed[[l]], data = .Zdt)
       }
-    }
-  Z.instruments <- list(dv = dv,
-                        Z.im = Z.im)
+    Z.instruments <- list(dv = dv,
+                          Z.im = Z.im)
+    } else Z.instruments <- NULL
 
   .cn <- colnames(.aa)
 
@@ -178,6 +183,8 @@ prepare_data <- function(dta = NULL, res = NULL,
               Z.instruments = Z.instruments,
               GRX = GRX,
               GRY = GRY,
+              X_idlist = X_idlist,
+              dtaidx = dta[,list(id,wID)],
               cov = list(Xcols = .cn,
                          Zcols = colnames(Z.dm),
                          intX = which(.cn == all.vars(f.Z.parsed[[1]])[1]),

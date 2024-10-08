@@ -12,7 +12,8 @@ gibbs_binomial_probit(
   mu_prior,
   sigma2 = 1,
   alpha_0 = 2,
-  beta_0 = 2
+  beta_0 = 2,
+  debug = FALSE
 )
 }
 \arguments{
