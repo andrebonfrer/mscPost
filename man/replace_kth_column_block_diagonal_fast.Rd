@@ -42,7 +42,7 @@ M <- Matrix::bdiag(replicate(N, matrix(rnorm(T * K), T, K), simplify = FALSE))
 M <- as.matrix(M)  # Convert the block diagonal matrix to a dense format
 
 # Column vector CR to replace the k-th column in each block (length N * T)
-CR <- rnorm(N * T)
+CR <- rnorm(N * T, mean = 10)
 
 # Replace the 2nd column (k = 2) of each block with the corresponding sub-vectors from GRX
 k <- 2

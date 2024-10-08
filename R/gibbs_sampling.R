@@ -33,7 +33,8 @@ gibbs_sampling <- function(gdata,
 
   K <- length(gdata$cov$Xcols)
 
-  J0 <- nrow(Zbase)
+  J0 <- gdata$cov$J0
+  J <- gdata$cov$J
   G <- ncol(Zbase)
   if(!is.null(Zim)) {
     L <- length(Zim$dv)
@@ -102,6 +103,8 @@ gibbs_sampling <- function(gdata,
 
     ############################ Start selection block
     if(run_selection_gibbs) {
+
+
       # first stage selection equation (this needs a Gibbs step function)
       .bd <- gibbs_binomial_probit(GRX, gdata$GRY,
                                       beta = beta_fs,
@@ -115,13 +118,14 @@ gibbs_sampling <- function(gdata,
       sigma2_fs <- .bd$sigma2
 
       resid <- gdata$GRY - pnorm( GRX %*% beta_fs)
+      residfake <- rnorm(nrow(X_block))
 
       # this step is slow and requires a lot of memory
       X_block <- replace_kth_column_block_diagonal_fast(X_block,
-                                                        resid,
-                                                        T = gdata$cov$T,
+                                                        residfake,
+                                                        T = gdata$cov$T * (1+J-J0),
                                                         K = K,
-                                                        N = gdata$cov$J,
+                                                        N = J0,
                                                         k = which(gdata$cov$Xcols=="GR"))
       # and this part a bit slow
       XtW <- Matrix::t(X_block) %*% W_block
@@ -224,7 +228,7 @@ gibbs_sampling <- function(gdata,
 
       if(run_selection_gibbs){
         beta_fs_samples[iter-burn_in,] <- beta_fs
-        sigma2_fs[iter-burn_in] <- sigma2_fs
+        sigma2_fs_samples[iter-burn_in] <- sigma2_fs
       }
     }
 
@@ -491,9 +495,11 @@ gibbs_sampler_one_draw_cov <- function(y_list, X_list, sigma_param,
 #' @importFrom truncnorm rtruncnorm
 #' @export
 gibbs_binomial_probit <- function(X, y, beta, Sigma_prior,
-                                  mu_prior, sigma2 = 1, alpha_0 = 2, beta_0 = 2) {
+                                  mu_prior, sigma2 = 1, alpha_0 = 2,
+                                  beta_0 = 2,
+                                  debug = FALSE) {
 
-
+if(debug) browser()
   # Number of observations and predictors
   n <- length(y)
   p <- ncol(X)

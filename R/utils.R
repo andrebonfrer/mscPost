@@ -122,7 +122,7 @@ parse_complex_formula <- function(formula) {
 #' M <- as.matrix(M)  # Convert the block diagonal matrix to a dense format
 #'
 #' # Column vector CR to replace the k-th column in each block (length N * T)
-#' CR <- rnorm(N * T)
+#' CR <- rnorm(N * T, mean = 10)
 #'
 #' # Replace the 2nd column (k = 2) of each block with the corresponding sub-vectors from GRX
 #' k <- 2
@@ -133,7 +133,7 @@ parse_complex_formula <- function(formula) {
 #' @export
 replace_kth_column_block_diagonal_fast <- function(M, CR, T, K, N, k) {
   # Check that CR has the correct length
-  if (length(CR) != N * T) {
+  if (length(CR) != nrow(M)) {
     stop("CR must be a column vector of length N * T.")
   }
 
@@ -141,18 +141,16 @@ replace_kth_column_block_diagonal_fast <- function(M, CR, T, K, N, k) {
     stop("k must be a valid column index between 1 and K.")
   }
 
-  # Find the indices of the k-th column in each block
-  for (i in 1:N) {
-    row_start <- (i - 1) * T + 1
-    row_end <- i * T
-    col_index <- (i - 1) * K + k  # The column index in the large matrix M
+  # Correct row and column indices
+  row_indices <- rep(seq(0, N-1) * T, each = T) + rep(seq(1, T), N)
+  col_indices <- rep(seq(0, N-1) * K + k, each = T)
 
-    # Replace the values in the k-th column of the i-th block with the sub-vector from GRX
-    M[row_start:row_end, col_index] <- CR[row_start:row_end]
-  }
+  # Replace the values in M
+  M[cbind(row_indices, col_indices)] <- CR
 
   return(M)
 }
+
 
 
 

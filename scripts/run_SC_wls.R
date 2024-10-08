@@ -112,7 +112,7 @@ samples <- gibbs_sampling(gdata,
                           n_iter = 20,
                           burn_in = 10,
                           Z_cov_dense = TRUE,
-                          run_selection_gibbs = FALSE
+                          run_selection_gibbs = TRUE
 )
 
 # Step 3: Extract samples and summarise
