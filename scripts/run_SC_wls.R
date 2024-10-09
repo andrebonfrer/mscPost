@@ -111,8 +111,8 @@ gdata <- prepare_data(dta=a$data,
 samples <- gibbs_sampling(gdata,
                           n_iter = 200,
                           burn_in = 100,
-                          Z_cov_dense = FALSE,
-                          run_selection_gibbs = FALSE
+                          Z_cov_dense = TRUE,
+                          run_selection_gibbs = TRUE
 )
 
 # Step 3: Extract samples and summarise
@@ -157,7 +157,7 @@ library(coda)
 run_single_chain <- function(seed) {
   set.seed(seed)
   samples <- gibbs_sampling(gdata = gdata,
-                            n_iter = 40000, burn_in = 35000)
+                            n_iter = 4000, burn_in = 3500)
   return(samples)
 }
 
